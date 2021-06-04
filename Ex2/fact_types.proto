@@ -1,0 +1,8 @@
+import "base.proto";
+import "facttypes_base.proto";  
+
+message News: NFactType.TFact
+{
+	repeated string id = 1;
+	required string name = 2;
+}
