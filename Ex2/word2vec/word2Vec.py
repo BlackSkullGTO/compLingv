@@ -5,7 +5,9 @@ from pyspark.ml.feature import StopWordsRemover
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.feature import IDF
 from pyspark.ml.feature import Word2Vec
-import re, string, datetime
+from pymorphy2 import MorphAnalyzer
+from nltk.corpus import stopwords
+import re, string, datetime, pymorphy2
 
 def remove_punctuation(text):
 
@@ -20,27 +22,34 @@ def remove_linebreaks(text):
     Удаление разрыва строк из текста
     """ 
     return text.strip()
-    
-def get_only_words(tokens):
-
-    """ 
-    Получение списка токенов, содержащих только слова
-    """ 
-    return list(filter(lambda x: re.match('[а-яА-Я]+', x), tokens))
 
 client = MongoClient()
 database = client.news_database
 news = database.news
 sentences = database.sentences
 
+patterns = "[A-Za-z0-9!#$%&'()*+,./:;<=>?@[\]^_`{|}~—\"\«»-]+"
+stopwords_ru = stopwords.words("russian")
+morph = MorphAnalyzer()
+
 f = open('input.txt', 'w')
 i = 0
 for x in news.find( {} ):
     i += 1
-    f.write(x['text']+'\n')
-    if i == 1000:
+    line = x['text']
+    line = re.sub(patterns, ' ', line)
+    line = re.sub(r'\n|\r|\t', ' ', line)
+    line = re.sub(r'\s+', ' ', line)
+    for token in line.split():
+        if token and token not in stopwords_ru:
+            token = token.strip()
+            token = morph.normal_forms(token)[0]
+            f.write(token+' ')
+   
+    if i == 2500:
         break
 f.close()
+
 
 spark = SparkSession.builder.appName("SimpleApplication").getOrCreate()
 
@@ -49,14 +58,10 @@ input_file = spark.sparkContext.textFile('input.txt')
 
 print('Подготовка данных 1')
 
-########################
 prepared = input_file.map(lambda x: (remove_punctuation(x))).map(lambda x: (remove_linebreaks(x)))
 prepared = prepared.map(lambda x: ([x]))
 
 prepared_df = prepared.toDF().selectExpr('_1 as text')
-#df = prepared.toDF()
-#prepared_df = df.selectExpr('_1 as text')
-########################
 
 print('Подготовка данных 2')
 
@@ -65,24 +70,22 @@ tokenizer = Tokenizer(inputCol='text', outputCol='words')
 words = tokenizer.transform(prepared_df)
 words.show()
 
-print('Подготовка данных 3')
-
 # Удалить стоп-слова
 stop_words = StopWordsRemover.loadDefaultStopWords('russian')
 remover = StopWordsRemover(inputCol='words', outputCol='filtered', stopWords=stop_words)
 filtered = remover.transform(words)
 
 # Вывести стоп-слова для русского языка
-print(stop_words)
+#print(stop_words)
 
 # Вывести таблицу filtered
-filtered.show()
+#filtered.show()
 
 # Вывести столбец таблицы words с токенами до удаления стоп-слов
-words.select('words').show(truncate=False, vertical=True)
+#words.select('words').show(truncate=False, vertical=True)
 
 # Вывести столбец "filtered" таблицы filtered с токенами после удаления стоп-слов
-filtered.select('filtered').show(truncate=False, vertical=True)
+#filtered.select('filtered').show(truncate=False, vertical=True)
 
 # Посчитать значения TF
 vectorizer = CountVectorizer(inputCol='filtered', outputCol='raw_features').fit(filtered)
@@ -131,7 +134,7 @@ for line in f:
     #Вывод
         if intext:
             print(_words)
-            synonyms = model.findSynonyms(word, 5)
+            synonyms = model.findSynonyms(word, 10)
             synonyms.show()
         else:
             print(_words)
