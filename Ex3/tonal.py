@@ -37,6 +37,7 @@ def get_tweets_for_model(cleaned_tokens_list):
 client = MongoClient()
 database = client.news_database
 sentences = database.sentences
+tonals = database.tonals
 
 stop_words=stopwords.words('russian')
 
