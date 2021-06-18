@@ -96,6 +96,7 @@ print("Accuracy is:", classify.accuracy(classifier, test_data))
 print(classifier.show_most_informative_features(10))
 
 sentenceTexts = sentences.find({})
+f = open('output.txt', 'w')
 i = 0
 for sentenceText in sentenceTexts:
     i += 1
@@ -103,6 +104,14 @@ for sentenceText in sentenceTexts:
     print(custom_tweet)
     custom_tokens = remove_noise(word_tokenize(custom_tweet))
     print(classifier.classify(dict([token,True]for token in custom_tokens)))
+    _tonals = {
+    "name": sentenceTexts['name'],
+    "sentence": sentenceTexts['text'],
+    "tonal": classifier.classify(dict([token,True]for token in custom_tokens))
+    }
+    f.write('name: ' + _tonals['name'] + ' sentence: ' + _tonals['sentene'] + ' tonal: ' + _tonals['tonal'] + '\n\n')
+    tonals.insert_one(_tonals)
     print('\n\n\n')
     if i == 500:
         break
+f.close()
