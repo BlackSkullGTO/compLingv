@@ -144,7 +144,7 @@ for line in f:
                 "synonyms": synonyms.select("word").collect().map(_.getString(0)).mkString(" ")
                 }
                 synonymsDB.insert_one(_synonyms)
-            f2.write(': 'synonyms.select("word").collect().map(_.getString(0)).mkString(" ")'\n')
+            f2.write(': ' + synonyms.select("word").collect().map(_.getString(0)).mkString(" ") + '\n')
         else:
             print(_words)
             f2.write(_words + ': ---\n')
