@@ -27,6 +27,7 @@ client = MongoClient()
 database = client.news_database
 news = database.news
 sentences = database.sentences
+synonymsDB = database.synonyms
 
 patterns = "[A-Za-z0-9!#$%&'()*+,./:;<=>?@[\]^_`{|}~—\"\«»-]+"
 stopwords_ru = stopwords.words("russian")
@@ -121,6 +122,7 @@ w2v_df = model.transform(words)
 w2v_df.show()
 
 f = open('/home/vagrant/Cursovaya/Ex2/names.txt', 'r')
+f2 = open('/home/vagrant/Cursovaya/Ex2/output.txt', 'w')
 for line in f:
     #Ввод слова
     _words = line.replace("\n", "")
@@ -134,12 +136,22 @@ for line in f:
     #Вывод
         if intext:
             print(_words)
+            f2.write(_words)
             synonyms = model.findSynonyms(word, 10)
             synonyms.show()
+            _synonyms = {
+                "name": _words,
+                "synonyms": synonyms.select("word").collect().map(_.getString(0)).mkString(" ")
+                }
+                synonymsDB.insert_one(_synonyms)
+            f2.write(': 'synonyms.select("word").collect().map(_.getString(0)).mkString(" ")'\n')
         else:
             print(_words)
+            f2.write(_words + ': ---\n')
             print("Synonims is not found")
         print("\n\n\n\n\nEND")
+
 f.close()
+f2.close()
 
 spark.stop()
